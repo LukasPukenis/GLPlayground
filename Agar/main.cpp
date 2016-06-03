@@ -62,11 +62,14 @@ int main()
 
 	bsp.debug();
 
-	auto & vertexes = bsp.getVertexes();	
+	auto & vertexes = bsp.getVertexes();
+
 	// extract polygons from faces and draw them
 	auto total = 0;
 	auto polygon = faces.begin();
 	auto faceCnt = 0;
+	
+	std::vector<unsigned int> indexes;
 
 	while (polygon != faces.end()) {
 		faceCnt++;
@@ -77,11 +80,18 @@ int main()
 		if (polygon == faces.end()) break;
 
 
+		int vertex = (*polygon)->vertex;
 		int length = (*polygon)->n_meshverts;
 		int offset = (*polygon)->meshvert;
+
+		for (auto i = 0; i < length; i++) {
+			indexes.push_back(vertex+ meshVertexes[i+offset]);
+		}
+
 		total += length;
 		elements.push_back(offset);
 	}
+	
 	/////////////////////////////////////
 
 	GLuint VBO, VAO, EBO;
@@ -93,7 +103,7 @@ int main()
 	glBindVertexArray(VAO);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(element_t)*elements.size(), &elements[0], GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*indexes.size(), &indexes[0], GL_STATIC_DRAW);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);	
 	glBufferData(GL_ARRAY_BUFFER, vertexes.size() * sizeof(BSP_vertex), &vertexes[0], GL_STATIC_DRAW);
@@ -153,7 +163,7 @@ int main()
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
-		glDrawElements(GL_TRIANGLES, total, GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, indexes.size(), GL_UNSIGNED_INT, 0);
 		
 		glBindVertexArray(0);
 
