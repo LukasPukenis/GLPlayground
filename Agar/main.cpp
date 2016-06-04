@@ -13,19 +13,19 @@
 #include <cmath>
 #include "Utils.h"
 #include "BSP.h"
+#include "Camera.h"
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+
 const GLuint WIDTH = 800, HEIGHT = 600;
+GLFWwindow* window;
+Camera camera;
+double deltaTime, lastFrameTime;
+int keysPressed[0xFF];
 
-auto CAM_INC = 0.62;
-auto CAM_Z = 20.0;
-auto CAM_X = 0.0;
-auto randomF(double low, double up) {
-	return low + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (up - low)));
-}
-
-int main()
-{
+void setup() {
+	camera.setScreenDimensions(WIDTH, HEIGHT);
 	glfwInit();
 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -35,11 +35,13 @@ int main()
 	glfwWindowHint(GLFW_SAMPLES, 4);
 
 	// Create a GLFWwindow object that we can use for GLFW's functions
-	GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "BSP Map parser", nullptr, nullptr);
+	window = glfwCreateWindow(WIDTH, HEIGHT, "BSP Map parser", nullptr, nullptr);
 	glfwMakeContextCurrent(window);
 
 	// Set the required callback functions
 	glfwSetKeyCallback(window, key_callback);
+	glfwSetCursorPosCallback(window, mouse_callback);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	// Set this to true so GLEW knows to use a modern approach to retrieving function pointers and extensions
 	glewExperimental = GL_TRUE;
@@ -48,9 +50,33 @@ int main()
 
 	// Define the viewport dimensions
 	glViewport(0, 0, WIDTH, HEIGHT);
+}
 
+void processInputs() {
+	if (keysPressed[GLFW_KEY_ESCAPE]) {
+		glfwSetWindowShouldClose(window, GL_TRUE);
+	}
+
+	if (keysPressed[GLFW_KEY_S]) {
+		camera.move(Camera::Forward);
+	}
+
+	if (keysPressed[GLFW_KEY_W]) {
+		camera.move(Camera::Backward);
+	}
+
+	if (keysPressed[GLFW_KEY_A]) {
+		camera.move(Camera::Left);
+	}
+
+	if (keysPressed[GLFW_KEY_D]) {
+		camera.move(Camera::Right);
+	}
+}
+
+void run() {
 	// Build and compile our shader program
-	Shader ourShader("basic.vert", "basic.frag");	
+	Shader ourShader("basic.vert", "basic.frag");
 
 	BSP bsp;
 	auto result = bsp.parse("map/maps/q3ctf2.bsp");
@@ -68,7 +94,7 @@ int main()
 	auto total = 0;
 	auto polygon = faces.begin();
 	auto faceCnt = 0;
-	
+
 	std::vector<unsigned int> indexes;
 
 	while (polygon != faces.end()) {
@@ -85,13 +111,13 @@ int main()
 		int offset = (*polygon)->meshvert;
 
 		for (auto i = 0; i < length; i++) {
-			indexes.push_back(vertex+ meshVertexes[i+offset]);
+			indexes.push_back(vertex + meshVertexes[i + offset]);
 		}
 
 		total += length;
 		elements.push_back(offset);
 	}
-	
+
 	/////////////////////////////////////
 
 	GLuint VBO, VAO, EBO;
@@ -105,15 +131,15 @@ int main()
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int)*indexes.size(), &indexes[0], GL_STATIC_DRAW);
 
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);	
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, vertexes.size() * sizeof(BSP_vertex), &vertexes[0], GL_STATIC_DRAW);
-	
+
 	// Position attribute
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(BSP_vertex), (GLvoid*)0);
 	glEnableVertexAttribArray(0);
 
 	// Color attribute
-	glVertexAttribPointer(1, 4, GL_BYTE, GL_FALSE, sizeof(BSP_vertex), (GLvoid*) ((10*sizeof(GL_FLOAT)) ));
+	glVertexAttribPointer(1, 4, GL_BYTE, GL_FALSE, sizeof(BSP_vertex), (GLvoid*)((10 * sizeof(GL_FLOAT))));
 	glEnableVertexAttribArray(1);
 
 	glEnable(GL_DEPTH_TEST);
@@ -122,11 +148,18 @@ int main()
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	glBindVertexArray(0); // Unbind VAO
-			
+
+	glm::mat4 projection = camera.getProjection();
+	camera.setPosition(glm::vec3(0.0, 0.0, 40.0));
+
 	while (!glfwWindowShouldClose(window))
-	{
+	{		
+		deltaTime = glfwGetTime() - lastFrameTime;
+		lastFrameTime = glfwGetTime();
+
 		// Check if any events have been activiated (key pressed, mouse moved etc.) and call corresponding response functions
 		glfwPollEvents();
+		processInputs();
 
 		// Render
 		// Clear the colorbuffer
@@ -141,30 +174,25 @@ int main()
 		GLint angleLoc = glGetUniformLocation(ourShader.Program, "angle");
 
 		glm::mat4 view;
-		glm::mat4 projection;
+		camera.setDeltaTime(deltaTime);
+		view = camera.getView();
 
-		view = glm::lookAt(glm::vec3(CAM_X, 0.0, CAM_Z), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
-
-		projection = glm::perspective(45.0f, (GLfloat)WIDTH / (GLfloat)HEIGHT, 0.01f, 1000.0f);
-		
-		// Get their uniform location			
-		auto t = glfwGetTime();
-
+		// Get their uniform location
 		glUniform1f(angleLoc, glfwGetTime());
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));		
+		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
 		glm::mat4 model = glm::mat4(1.0);	// just identity
-			
+
 		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-		glBindVertexArray(VAO);	
+		glBindVertexArray(VAO);
 
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
 		glDrawElements(GL_TRIANGLES, indexes.size(), GL_UNSIGNED_INT, 0);
-		
+
 		glBindVertexArray(0);
 
 		glfwSwapBuffers(window);
@@ -175,30 +203,42 @@ int main()
 	glDeleteBuffers(1, &VBO);
 
 	glfwTerminate();
-	return 0;
 }
 
 // Is called whenever a key is pressed/released via GLFW
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode) {
+	keysPressed[key] = action;
+}
+
+bool firstMouse = true;
+double lastMouseX, lastMouseY;
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-		glfwSetWindowShouldClose(window, GL_TRUE);
-	}
-	if (key == GLFW_KEY_S) {
-		std::cout << "Zoom out\n";
-		CAM_Z += CAM_INC;
+	if (firstMouse) {
+		lastMouseX = xpos;
+		lastMouseY = ypos;
+		firstMouse = false;
 	}
 
-	if (key == GLFW_KEY_W) {
-		std::cout << "Zoom in: " << CAM_Z << "\n";
-		CAM_Z -= CAM_INC;
-	}
+	auto sensitivity = 0.5;
 
-	if (key == GLFW_KEY_A) {
-		CAM_X -= CAM_INC;
-	}
+	auto diffX = xpos - lastMouseX;
+	auto diffY = lastMouseY - ypos;
+	lastMouseX = xpos;
+	lastMouseY = ypos;
 
-	if (key == GLFW_KEY_D) {
-		CAM_X += CAM_INC;
-	}
+	diffX *= sensitivity;
+	diffY *= sensitivity;
+
+	std::cout << diffY << std::endl;
+	camera.adjustPitch(diffY);
+	camera.adjustYaw(diffX);
+}
+
+int main()
+{
+	setup();
+	run();
+
+	return 0;
 }

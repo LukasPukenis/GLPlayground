@@ -11,7 +11,7 @@
 #include "utils.h"
 
 void BSP::parseHeader() {
-	//////// try to validate if directories are correct. 17 directories, each 2 ints, second int multiple of 4
+	// try to validate if directories are correct. 17 directories, each 2 ints, second int multiple of 4
 	mapFile.seekg(4 + 4, mapFile.beg);
 	for (auto i = 0; i < 17; i++) {		
 		auto offset = readIntAndAdvance();

@@ -2,6 +2,10 @@
 #pragma once
 
 namespace Utils {
+	inline double randomF(double low, double up) {
+		return low + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (up - low)));
+	}
+
 	constexpr unsigned int bytes2megabytes(unsigned int bytes) {
 		return bytes / 1024 / 1024;
 	}
