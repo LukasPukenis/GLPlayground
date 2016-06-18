@@ -130,7 +130,7 @@ void run() {
 	Shader ourShader("basic.vert", "basic.frag");
 
 	BSP bsp;
-	auto result = bsp.parse("map/maps/q3ctf2.bsp");
+	auto result = bsp.parse("map/maps/q3dm2.bsp");
 	auto & faces = bsp.getFaces();
 	auto & meshVertexes = bsp.getMeshVertexes();
 

@@ -124,7 +124,6 @@ void BSP::readTextures() {
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	auto textureIndex = 0;
 	for (unsigned int i = 0; i < depth; i ++) {
 		auto texture = BSP_texture();
 
@@ -161,11 +160,10 @@ void BSP::readTextures() {
 		}
 		
 		if (isRealFile) {
-			glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, textureIndex, width, height, 1, GL_RGB, GL_UNSIGNED_BYTE, image);
-			textureIndex++;
+			glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, width, height, 1, GL_RGB, GL_UNSIGNED_BYTE, image);
+			
 			SOIL_free_image_data(image);
 		}
-
 	}
 	
 	//glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
