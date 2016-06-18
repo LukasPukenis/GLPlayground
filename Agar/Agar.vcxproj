@@ -70,8 +70,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>Libs\;Libs\glm;Libs\glew\include;Libs\glfw\include;$(IncludePath)</IncludePath>
-    <LibraryPath>Libs\glew\lib\Release\Win32;Libs\glfw\lib-vc2015;$(LibraryPath)</LibraryPath>
+    <IncludePath>Libs\;Libs\glm;Libs\glew\include;Libs\glfw\include;Libs\SOIL\src;$(IncludePath)</IncludePath>
+    <LibraryPath>Libs\SOIL\lib;Libs\glew\lib\Release\Win32;Libs\glfw\lib-vc2015;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>Libs\glfw\include;Libs\glew\include;Libs\glm;Libs\;$(IncludePath)</IncludePath>
@@ -84,7 +84,7 @@
       <SDLCheck>true</SDLCheck>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);glfw3.lib;opengl32.lib;glew32s.lib</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);glfw3.lib;opengl32.lib;glew32s.lib;SOIL.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -139,8 +139,18 @@
   <ItemGroup>
     <None Include="basic.frag" />
     <None Include="basic.vert" />
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\packages\libjpeg.redist.9.2.0.1\build\native\libjpeg.redist.targets" Condition="Exists('..\packages\libjpeg.redist.9.2.0.1\build\native\libjpeg.redist.targets')" />
+    <Import Project="..\packages\libjpeg.9.2.0.1\build\native\libjpeg.targets" Condition="Exists('..\packages\libjpeg.9.2.0.1\build\native\libjpeg.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\libjpeg.redist.9.2.0.1\build\native\libjpeg.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\libjpeg.redist.9.2.0.1\build\native\libjpeg.redist.targets'))" />
+    <Error Condition="!Exists('..\packages\libjpeg.9.2.0.1\build\native\libjpeg.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\libjpeg.9.2.0.1\build\native\libjpeg.targets'))" />
+  </Target>
 </Project>

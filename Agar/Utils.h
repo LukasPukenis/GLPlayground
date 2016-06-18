@@ -1,8 +1,9 @@
 #include <cmath>
+#include <GL/GLU.h>
 #pragma once
 
 namespace Utils {
-	inline double randomF(double low, double up) {
+	inline static double randomF(double low, double up) {
 		return low + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (up - low)));
 	}
 
@@ -22,10 +23,7 @@ namespace Utils {
 		double v;       // percent
 	} hsv;
 
-	static hsv   rgb2hsv(rgb in);
-	static rgb   hsv2rgb(hsv in);
-
-	hsv rgb2hsv(rgb in)
+	inline static hsv rgb2hsv(rgb in)
 	{
 		hsv         out;
 		double      min, max, delta;
@@ -71,7 +69,7 @@ namespace Utils {
 	}
 
 
-	rgb hsv2rgb(hsv in)
+	inline static rgb hsv2rgb(hsv in)
 	{
 		double      hh, p, q, t, ff;
 		long        i;

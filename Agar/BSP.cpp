@@ -9,6 +9,7 @@
 #include <tuple>
 #include <regex>
 #include "utils.h"
+#include <SOIL.h>
 
 void BSP::parseHeader() {
 	// try to validate if directories are correct. 17 directories, each 2 ints, second int multiple of 4
@@ -32,6 +33,7 @@ void BSP::readVertexes() {
 	for (unsigned int i = 0; i < len; i+=44) {
 		auto vertex = BSP_vertex();
 		double K = 0.01;
+		K = 1.0;
 		vertex.x = readFloatAndAdvance()*K;
 		vertex.y = readFloatAndAdvance()*K;
 		vertex.z = readFloatAndAdvance()*K;
@@ -59,6 +61,13 @@ void BSP::readVertexes() {
 
 		vertexes.push_back(vertex);
 	}
+
+	auto x1 = std::max_element(vertexes.begin(), vertexes.end(), [](const BSP_vertex &a, const BSP_vertex &b) { return a.texCoordX < b.texCoordX; });
+	auto x2 = std::max_element(vertexes.begin(), vertexes.end(), [](const BSP_vertex &a, const BSP_vertex &b) { return a.texCoordY < b.texCoordY; });
+	auto y1 = std::min_element(vertexes.begin(), vertexes.end(), [](const BSP_vertex &a, const BSP_vertex &b) { return a.texCoordX < b.texCoordX; });
+	auto y2 = std::min_element(vertexes.begin(), vertexes.end(), [](const BSP_vertex &a, const BSP_vertex &b) { return a.texCoordY < b.texCoordY; });
+	int x = 2;
+
 }
 
 void BSP::readMeshVertexes() {
@@ -90,6 +99,77 @@ unsigned char BSP::readByteAndAdvance() {
 	mapFile.read(reinterpret_cast<char*>(data), 1);
 	auto value = reinterpret_cast<unsigned char&>(data);
 	return value;
+}
+
+void BSP::readTextures() {
+	unsigned char data[64];
+	int index = 1;
+	auto len = header[index].length;
+	mapFile.seekg(header[index].offset);
+
+	int maxW = 256;
+	int maxH = 256;
+	GLuint texArray;
+
+	glActiveTexture(GL_TEXTURE0);
+	glGenTextures(1, &texArray);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
+
+	auto depth = len / sizeof(BSP_texture);
+
+	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGB, maxW, maxH, depth);
+	
+	//glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	//glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	auto textureIndex = 0;
+	for (unsigned int i = 0; i < depth; i ++) {
+		auto texture = BSP_texture();
+
+		mapFile.read(reinterpret_cast<char*>(&texture), sizeof(BSP_texture));
+		textures.push_back(texture);
+		std::fstream texFile;
+		std::string jpeg_filename = (std::string("./map/") + texture.name + ".jpg");
+		std::string tga_filename = (std::string("./map/") + texture.name + ".tga");
+
+		int width, height, channels;
+		channels = 0;
+		unsigned char * image = nullptr;
+		texFile.open(jpeg_filename.c_str(), std::ios::in);
+		bool isGoodJPEG = texFile.good();
+		texFile.close();
+		
+		texFile.open(tga_filename.c_str(), std::ios::in);
+		bool isGoodTGA = texFile.good();
+		texFile.close();
+
+		bool isRealFile = false;
+		if (isGoodJPEG) {
+			isRealFile = true;
+			std::cout << texture.name << " [JPEG] ";
+			image = SOIL_load_image(jpeg_filename.c_str(), &width, &height, &channels, SOIL_LOAD_RGB);
+		}
+		else if(isGoodTGA) {
+			isRealFile = true;
+			std::cout << texture.name << " [TGA] ";
+			image = SOIL_load_image(tga_filename.c_str(), &width, &height, &channels, SOIL_LOAD_RGB);
+		}
+		else {
+			std::cout << texture.name << "[!!!]";
+		}
+		
+		if (isRealFile) {
+			glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, textureIndex, width, height, 1, GL_RGB, GL_UNSIGNED_BYTE, image);
+			textureIndex++;
+			SOIL_free_image_data(image);
+		}
+
+	}
+	
+	//glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+	std::cout << std::endl;
 }
 
 void BSP::readFaces() {
@@ -130,7 +210,7 @@ void BSP::readFaces() {
 		face->normal[2] = readFloatAndAdvance();
 		face->size[0] = readIntAndAdvance();
 		face->size[1] = readIntAndAdvance();
-		faces.push_back(face);
+		faces.push_back(face);		
 	}
 }
 
@@ -227,6 +307,7 @@ BSP::STATUS BSP::parse(const char * path) {
 	readVertexes();
 	readMeshVertexes();
 	readFaces();
+	readTextures();
 	
 	return BSP::STATUS::OK;
 }

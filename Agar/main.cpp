@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 #define GLEW_STATIC
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -15,6 +15,56 @@
 #include "BSP.h"
 #include "Camera.h"
 
+void APIENTRY openglCallbackFunction(GLenum source,
+	GLenum type,
+	GLuint id,
+	GLenum severity,
+	GLsizei length,
+	const GLchar* message,
+	const void* userParam) {
+
+	std::cout << "---------------------opengl-callback-start------------" << std::endl;
+	std::cout << "message: " << message << std::endl;
+	std::cout << "type: ";
+	switch (type) {
+	case GL_DEBUG_TYPE_ERROR:
+		std::cout << "ERROR";
+		break;
+	case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+		std::cout << "DEPRECATED_BEHAVIOR";
+		break;
+	case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+		std::cout << "UNDEFINED_BEHAVIOR";
+		break;
+	case GL_DEBUG_TYPE_PORTABILITY:
+		std::cout << "PORTABILITY";
+		break;
+	case GL_DEBUG_TYPE_PERFORMANCE:
+		std::cout << "PERFORMANCE";
+		break;
+	case GL_DEBUG_TYPE_OTHER:
+		std::cout << "OTHER";
+		break;
+	}
+	std::cout << std::endl;
+
+	std::cout << "id: " << id << std::endl;
+	std::cout << "severity: ";
+	switch (severity) {
+	case GL_DEBUG_SEVERITY_LOW:
+		std::cout << "LOW";
+		break;
+	case GL_DEBUG_SEVERITY_MEDIUM:
+		std::cout << "MEDIUM";
+		break;
+	case GL_DEBUG_SEVERITY_HIGH:
+		std::cout << "HIGH";
+		break;
+	}
+	std::cout << std::endl;
+	std::cout << "---------------------opengl-callback-end--------------" << std::endl;
+}
+
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
@@ -28,11 +78,12 @@ void setup() {
 	camera.setScreenDimensions(WIDTH, HEIGHT);
 	glfwInit();
 
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 	glfwWindowHint(GLFW_SAMPLES, 4);
+	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
 
 	// Create a GLFWwindow object that we can use for GLFW's functions
 	window = glfwCreateWindow(WIDTH, HEIGHT, "BSP Map parser", nullptr, nullptr);
@@ -105,13 +156,14 @@ void run() {
 
 		if (polygon == faces.end()) break;
 
-
 		int vertex = (*polygon)->vertex;
 		int length = (*polygon)->n_meshverts;
 		int offset = (*polygon)->meshvert;
 
 		for (auto i = 0; i < length; i++) {
-			indexes.push_back(vertex + meshVertexes[i + offset]);
+			auto index = vertex + meshVertexes[i + offset];
+			vertexes[index].textureIndex = (*polygon)->texture;
+			indexes.push_back(index);
 		}
 
 		total += length;
@@ -119,7 +171,10 @@ void run() {
 	}
 
 	/////////////////////////////////////
-
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+	glEnable(GL_DEBUG_OUTPUT);
+	glDebugMessageCallback(openglCallbackFunction, nullptr);
+	
 	GLuint VBO, VAO, EBO;
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
@@ -141,6 +196,14 @@ void run() {
 	// Color attribute
 	glVertexAttribPointer(1, 4, GL_BYTE, GL_FALSE, sizeof(BSP_vertex), (GLvoid*)((10 * sizeof(GL_FLOAT))));
 	glEnableVertexAttribArray(1);
+	
+	// Texel attribute
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(BSP_vertex), (GLvoid*)((3 * sizeof(GL_FLOAT))));
+	glEnableVertexAttribArray(2);
+
+	// Texture array depth/id attribute
+	glVertexAttribIPointer(3, 1, GL_INT, sizeof(BSP_vertex), (GLvoid*)((4 * sizeof(GLbyte)) + (10 * sizeof(GL_FLOAT))));
+	glEnableVertexAttribArray(3);
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);

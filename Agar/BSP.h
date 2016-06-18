@@ -71,7 +71,14 @@ struct BSP_vertex {
 	GLfloat texCoordX, texCoordY;
 	GLfloat lmCoordX, lmCoordY;
 	GLfloat normalX, normalY, normalZ;
-	byte r, g, b, a;
+	GLbyte r, g, b, a;
+	GLint textureIndex;
+};
+
+struct BSP_texture {
+	char name[64];
+	int flags;
+	int contents;
 };
 
 struct BSP_face {
@@ -94,6 +101,7 @@ struct BSP_face {
 typedef std::vector<std::shared_ptr<BSP_face>> face_t;
 typedef std::vector<BSP_vertex> vertex_t;
 typedef std::vector<unsigned int> meshVertex_t;
+typedef std::vector<BSP_texture> texture_t;
 
 class BSP {
 public:	
@@ -121,6 +129,7 @@ private:
 	bool validateHeader(std::ifstream & stream);
 	void parseHeader();
 	void readEntities();
+	void readTextures();
 	void readVertexes();
 	void readMeshVertexes();
 	void readFaces();
@@ -135,6 +144,7 @@ private:
 	vertex_t vertexes;
 	meshVertex_t meshVertexes;
 	face_t faces;
+	texture_t textures;
 
 	std::map<std::string, std::shared_ptr<BSPEntity_default*>> entities;
 	std::map<std::string, std::string> entityTargets;
