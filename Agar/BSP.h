@@ -73,6 +73,7 @@ struct BSP_vertex {
 	GLfloat normalX, normalY, normalZ;
 	GLbyte r, g, b, a;
 	GLint textureIndex;
+	GLint lightmapIndex;
 };
 
 struct BSP_texture {
@@ -98,10 +99,15 @@ struct BSP_face {
 	int size[2];	//	Patch dimensions.
 };
 
+struct BSP_lightmap {
+	std::array<GLbyte, 128*128*3> rgb;
+};
+
 typedef std::vector<std::shared_ptr<BSP_face>> face_t;
 typedef std::vector<BSP_vertex> vertex_t;
 typedef std::vector<unsigned int> meshVertex_t;
 typedef std::vector<BSP_texture> texture_t;
+typedef std::vector<BSP_lightmap> lightmap_t;
 
 class BSP {
 public:	
@@ -113,12 +119,24 @@ public:
 	BSP::STATUS parse(const char * path);
 	void debug();
 
+	GLuint const getTextureHandle() {
+		return textureHandle;
+	}
+
+	GLuint const getLightmapHandle() {
+		return lightmapHandle;
+	}
+
 	face_t & getFaces() {
 		return faces;
 	};
 
 	vertex_t & getVertexes() {
 		return vertexes;
+	}
+
+	lightmap_t & getLightmaps() {
+		return lightmaps;
 	}
 
 	meshVertex_t & getMeshVertexes() {
@@ -131,6 +149,7 @@ private:
 	void readEntities();
 	void readTextures();
 	void readVertexes();
+	void readLightmaps();
 	void readMeshVertexes();
 	void readFaces();
 	
@@ -143,9 +162,11 @@ private:
 	std::array<BSPHeader, 17> header;
 	vertex_t vertexes;
 	meshVertex_t meshVertexes;
+	lightmap_t lightmaps;
 	face_t faces;
 	texture_t textures;
 
+	GLuint textureHandle, lightmapHandle;
 	std::map<std::string, std::shared_ptr<BSPEntity_default*>> entities;
 	std::map<std::string, std::string> entityTargets;
 };

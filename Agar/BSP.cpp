@@ -101,6 +101,51 @@ unsigned char BSP::readByteAndAdvance() {
 	return value;
 }
 
+void BSP::readLightmaps() {
+	int index = 14;
+	auto len = header[index].length;
+	mapFile.seekg(header[index].offset);
+
+	// by spec lightmaps are 128x128 always
+	int const maxW = 128;
+	int const maxH = 128;
+
+	auto count = len / sizeof(BSP_lightmap);	
+
+	glActiveTexture(GL_TEXTURE0+1);
+	glGenTextures(1, &lightmapHandle);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, lightmapHandle);
+
+	auto depth = len / sizeof(BSP_lightmap);
+
+	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 4, GL_RGB, maxW, maxH, depth);	
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	// mipmap parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	for (auto i = 0; i < count; i++) {
+		BSP_lightmap lightmap;
+
+		for (auto j = 0; j < maxW*maxH*3; j += 3) {
+			auto r = readByteAndAdvance();
+			auto g = readByteAndAdvance();
+			auto b = readByteAndAdvance();
+
+			lightmap.rgb[j + 0] = r;
+			lightmap.rgb[j + 1] = g;
+			lightmap.rgb[j + 2] = b;
+		}
+
+		lightmaps.push_back(lightmap);
+		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, maxW, maxH, 1, GL_RGB, GL_UNSIGNED_BYTE, lightmap.rgb.data());
+	}
+
+	glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+}
+
 void BSP::readTextures() {
 	unsigned char data[64];
 	int index = 1;
@@ -109,20 +154,20 @@ void BSP::readTextures() {
 
 	int maxW = 256;
 	int maxH = 256;
-	GLuint texArray;
 
 	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &texArray);
-	glBindTexture(GL_TEXTURE_2D_ARRAY, texArray);
+	glGenTextures(1, &textureHandle);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, textureHandle);
 
 	auto depth = len / sizeof(BSP_texture);
 
-	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGB, maxW, maxH, depth);
-	
-	//glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	//glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexStorage3D(GL_TEXTURE_2D_ARRAY, 4, GL_RGB, maxW, maxH, depth);	
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	// mipmap parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	for (unsigned int i = 0; i < depth; i ++) {
 		auto texture = BSP_texture();
@@ -166,7 +211,8 @@ void BSP::readTextures() {
 		}
 	}
 	
-	//glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+	glGenerateMipmap(GL_TEXTURE_2D_ARRAY);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 	std::cout << std::endl;
 }
 
@@ -306,6 +352,7 @@ BSP::STATUS BSP::parse(const char * path) {
 	readMeshVertexes();
 	readFaces();
 	readTextures();
+	readLightmaps();
 	
 	return BSP::STATUS::OK;
 }

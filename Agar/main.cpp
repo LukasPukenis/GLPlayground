@@ -163,6 +163,7 @@ void run() {
 		for (auto i = 0; i < length; i++) {
 			auto index = vertex + meshVertexes[i + offset];
 			vertexes[index].textureIndex = (*polygon)->texture;
+			vertexes[index].lightmapIndex = (*polygon)->lm_index;
 			indexes.push_back(index);
 		}
 
@@ -205,6 +206,14 @@ void run() {
 	glVertexAttribIPointer(3, 1, GL_INT, sizeof(BSP_vertex), (GLvoid*)((4 * sizeof(GLbyte)) + (10 * sizeof(GL_FLOAT))));
 	glEnableVertexAttribArray(3);
 
+	// Lightmap array depth/id attribute
+	glVertexAttribIPointer(4, 1, GL_INT, sizeof(BSP_vertex), (GLvoid*)((1*sizeof(GLint))+(4 * sizeof(GLbyte)) + (10 * sizeof(GL_FLOAT))));
+	glEnableVertexAttribArray(4);
+
+	// Lightmap uv
+	glVertexAttribPointer(5, 2, GL_FLOAT, GL_FALSE, sizeof(BSP_vertex), (GLvoid*)(5 * sizeof(GL_FLOAT)));
+	glEnableVertexAttribArray(5);
+
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 
@@ -214,6 +223,16 @@ void run() {
 
 	glm::mat4 projection = camera.getProjection();
 	camera.setPosition(glm::vec3(0.0, 0.0, 40.0));
+
+	ourShader.Use();
+	auto texLocation = glGetUniformLocation(ourShader.Program, "_texture");
+	auto lmLocation = glGetUniformLocation(ourShader.Program, "_lightmap");
+
+	glUniform1i(texLocation, 0);
+	glUniform1i(lmLocation, 1);
+
+	//assert(texLocation != -1, "texLocation uniform was optimized");
+	//assert(lmLocation != -1, "lmLocation uniform was optimized");
 
 	while (!glfwWindowShouldClose(window))
 	{		
@@ -226,11 +245,15 @@ void run() {
 
 		// Render
 		// Clear the colorbuffer
-		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+		glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		
+		glActiveTexture(GL_TEXTURE0 + 0);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, bsp.getTextureHandle());
 
-		ourShader.Use();
-
+		glActiveTexture(GL_TEXTURE0 + 1);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, bsp.getLightmapHandle());
+		
 		GLint modelLoc = glGetUniformLocation(ourShader.Program, "model");
 		GLint viewLoc = glGetUniformLocation(ourShader.Program, "view");
 		GLint projLoc = glGetUniformLocation(ourShader.Program, "projection");
