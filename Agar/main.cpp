@@ -84,6 +84,7 @@ void setup() {
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 	glfwWindowHint(GLFW_SAMPLES, 4);
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
+	glfwWindowHint(GLFW_DEPTH_BITS, 32);
 
 	// Create a GLFWwindow object that we can use for GLFW's functions
 	window = glfwCreateWindow(WIDTH, HEIGHT, "BSP Map parser", nullptr, nullptr);
@@ -124,6 +125,35 @@ void processInputs() {
 		camera.move(Camera::Right);
 	}
 }
+/*
+screenshots:
+http://puu.sh/pB6Ob/18a49c192e.jpg
+http://puu.sh/pB6Pr/6d0a1ff2ae.jpg
+http://puu.sh/pB6RY/f1ae00a181.jpg
+http://puu.sh/pB6VT/8d06cf59a8.jpg
+
+http://puu.sh/pB7iF/9d489c22f7.jpg
+*/
+
+/*
+BSP_vertex cubicBezier(const BSP_vertex & c0, const BSP_vertex & c1, const BSP_vertex & c2, float t) {
+	auto _c0 = glm::vec3(c0.x, c0.y, c0.z);
+	auto _c1 = glm::vec3(c1.x, c1.y, c1.z);
+	auto _c2 = glm::vec3(c2.x, c2.y, c2.z);
+
+	float b = 1.0 - t;
+	auto dist = b * _c0 + 2 * b*t*_c1 + t*t*_c2;
+	BSP_vertex final;
+	final.x = dist.x;
+	final.y = dist.y;
+	final.z = dist.z;
+	return final;
+}
+*/
+glm::vec3 cubicBezier(const glm::vec3 & c0, const glm::vec3 & c1, const glm::vec3 & c2, float t) {
+	float b = 1.0 - t;
+	return b * c0 + 2*b*t*c1 + t*t*c2;
+}
 
 void run() {
 	// Build and compile our shader program
@@ -147,28 +177,144 @@ void run() {
 	auto faceCnt = 0;
 
 	std::vector<unsigned int> indexes;
+	
+	std::sort(faces.begin(), faces.end(), [&](const auto & a, const auto & b) {
+		return a->type < b->type;
+	});
 
 	while (polygon != faces.end()) {
 		faceCnt++;
 		polygon = std::find_if(polygon + 1, faces.end(), [&](const auto & item) {
-			return item->type == 1;
+			return item->type == 1 || item->type == 2;
 		});
-
+		
 		if (polygon == faces.end()) break;
+		auto face = *polygon;
+		auto type = face->type;
 
-		int vertex = (*polygon)->vertex;
-		int length = (*polygon)->n_meshverts;
-		int offset = (*polygon)->meshvert;
+		int vertex = face->vertex;
+		int length = face->n_meshverts;
+		int offset = face->meshvert;
+		auto _off = vertexes.size();
 
-		for (auto i = 0; i < length; i++) {
-			auto index = vertex + meshVertexes[i + offset];
-			vertexes[index].textureIndex = (*polygon)->texture;
-			vertexes[index].lightmapIndex = (*polygon)->lm_index;
-			indexes.push_back(index);
+		if (type == 1 || type == 3) {
+			for (auto i = 0; i < length; i++) {
+				auto index = vertex + meshVertexes[i + offset];
+				vertexes[index].textureIndex = face->texture;
+				vertexes[index].lightmapIndex = face->lm_index;
+				indexes.push_back(index);
+			}
+
+			total += length;
+			elements.push_back(offset);
+		}	
+		else if (type == 2) {			
+			for (int py = 0; py < face->size[1] - 2; py += 2) {				
+				for (int px = 0; px < face->size[0] - 2; px += 2) {
+					auto indexOffset = vertexes.size();
+					int rowOff = face->size[0] * py;
+					int off = face->vertex;
+
+					auto c1 = off + rowOff + px;
+					auto c2 = off + rowOff + px + 1;
+					auto c3 = off + rowOff + px + 2;
+
+					rowOff += face->size[0];
+
+					auto c4 = off + rowOff + px;
+					auto c5 = off + rowOff + px + 1;
+					auto c6 = off + rowOff + px + 2;
+
+					rowOff += face->size[0];
+
+					auto c7 = off + rowOff + px;
+					auto c8 = off + rowOff + px + 1;
+					auto c9 = off + rowOff + px + 2;
+					
+					std::array<glm::vec3, 9> controls;
+					controls[0] = glm::vec3(vertexes[c1].x, vertexes[c1].y, vertexes[c1].z);
+					controls[1] = glm::vec3(vertexes[c2].x, vertexes[c2].y, vertexes[c2].z);
+					controls[2] = glm::vec3(vertexes[c3].x, vertexes[c3].y, vertexes[c3].z);
+
+					controls[3] = glm::vec3(vertexes[c4].x, vertexes[c4].y, vertexes[c4].z);
+					controls[4] = glm::vec3(vertexes[c5].x, vertexes[c5].y, vertexes[c5].z);
+					controls[5] = glm::vec3(vertexes[c6].x, vertexes[c6].y, vertexes[c6].z);
+
+					controls[6] = glm::vec3(vertexes[c7].x, vertexes[c7].y, vertexes[c7].z);
+					controls[7] = glm::vec3(vertexes[c8].x, vertexes[c8].y, vertexes[c8].z);
+					controls[8] = glm::vec3(vertexes[c9].x, vertexes[c9].y, vertexes[c9].z);
+
+					auto L = 8;
+					auto L1 = L + 1;
+
+					for (auto i = 0; i < L1; ++i) {
+						float a = (float)i / L;
+						float b = 1 - a;
+
+						BSP_vertex v;
+						glm::vec3 interpolated = controls[0] * (b * b) +
+												 controls[3] * (2 * b * a) +
+												 controls[6] * (a * a);
+						v.x = interpolated.x;
+						v.y = interpolated.y;
+						v.z = interpolated.z;
+						v.textureIndex = face->texture;
+						v.lightmapIndex = face->lm_index;
+						v.texCoordX = Utils::randomF(0.0, 1.0);
+						v.texCoordY = Utils::randomF(0.0, 1.0);
+						vertexes.push_back(v);
+					}
+
+					for (auto i = 1; i < L1; ++i) {
+						float a = (float)i / L;
+						float b = 1.0 - a;
+
+						glm::vec3 temp[3];
+
+						int j;
+						for (j = 0; j < 3; ++j) {
+							int k = 3 * j;
+							temp[j] =
+								controls[k + 0] * (b * b) +
+								controls[k + 1] * (2 * b * a) +
+								controls[k + 2] * (a * a);
+						}
+
+						for (j = 0; j < L1; ++j) {
+							float a = (float)j / L;
+							float b = 1.0 - a;
+
+							BSP_vertex v;
+							glm::vec3 interpolated = temp[0] * (b * b) +
+								temp[1] * (2 * b * a) +
+								temp[2] * (a * a);
+							v.x = interpolated.x;
+							v.y = interpolated.y;
+							v.z = interpolated.z;
+							v.textureIndex = face->texture;
+							v.lightmapIndex = face->lm_index;
+							v.texCoordX = Utils::randomF(0.0, 1.0);
+							v.texCoordY = Utils::randomF(0.0, 1.0);
+							vertexes.push_back(v);
+						}
+					}
+					
+					for (int row = 0; row < L; ++row) {
+						for (int col = 0; col < L; ++col) {
+							indexes.push_back(indexOffset + (row + 1) * L1 + col);
+							indexes.push_back(indexOffset + row * L1 + col);
+							indexes.push_back(indexOffset + row * L1 + (col + 1));
+
+							indexes.push_back(indexOffset + (row + 1) * L1 + col);
+							indexes.push_back(indexOffset + row * L1 + (col + 1));
+							indexes.push_back(indexOffset + (row + 1) * L1 + (col + 1));
+						}
+					}
+					
+					///////////////////////////////////
+				}
+			}
 		}
-
-		total += length;
-		elements.push_back(offset);
 	}
 
 	/////////////////////////////////////

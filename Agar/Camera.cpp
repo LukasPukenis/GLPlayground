@@ -4,7 +4,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <cassert>
 
-Camera::Camera():screenWidth(0), screenHeight(0), yaw(-90), moveSpeed(600.0f) {	
+Camera::Camera():screenWidth(0), screenHeight(0), yaw(-90), moveSpeed(1000.0f) {	
 }
 
 const glm::mat4 Camera::getView() {
@@ -50,7 +50,7 @@ void const Camera::setScreenDimensions(unsigned int width, unsigned int height) 
 void Camera::updateProjection() {
 	assert(screenWidth > 0 || screenHeight > 0, "Screen dimensions for camera must be initialized in order to form perspective");
 
-	projection = glm::perspective(45.0f, (GLfloat)screenWidth / (GLfloat)screenHeight, 0.01f, 2000.0f);
+	projection = glm::perspective(45.0f, (GLfloat)screenWidth / (GLfloat)screenHeight, 10.1f, 1500.0f);
 }
 
 void Camera::adjustPitch(double _pitch) {
