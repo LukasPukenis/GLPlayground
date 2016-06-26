@@ -232,6 +232,8 @@ void run() {
 					auto c9 = off + rowOff + px + 2;
 					
 					std::array<glm::vec3, 9> controls;
+					std::array<glm::vec3, 9> texcoords;
+
 					controls[0] = glm::vec3(vertexes[c1].x, vertexes[c1].y, vertexes[c1].z);
 					controls[1] = glm::vec3(vertexes[c2].x, vertexes[c2].y, vertexes[c2].z);
 					controls[2] = glm::vec3(vertexes[c3].x, vertexes[c3].y, vertexes[c3].z);
@@ -250,14 +252,8 @@ void run() {
 					for (auto i = 0; i < L1; ++i) {
 						float a = (float)i / L;
 						float b = 1 - a;
-
-						BSP_vertex v;
-						glm::vec3 interpolated = controls[0] * (b * b) +
-												 controls[3] * (2 * b * a) +
-												 controls[6] * (a * a);
-						v.x = interpolated.x;
-						v.y = interpolated.y;
-						v.z = interpolated.z;
+						
+						auto v = Utils::bezier3(vertexes[c1], vertexes[c4], vertexes[c7], a);
 						v.textureIndex = face->texture;
 						v.lightmapIndex = face->lm_index;
 						v.texCoordX = Utils::randomF(0.0, 1.0);
@@ -269,28 +265,21 @@ void run() {
 						float a = (float)i / L;
 						float b = 1.0 - a;
 
-						glm::vec3 temp[3];
+						BSP_vertex temp[3];
 
 						int j;
 						for (j = 0; j < 3; ++j) {
 							int k = 3 * j;
-							temp[j] =
-								controls[k + 0] * (b * b) +
-								controls[k + 1] * (2 * b * a) +
-								controls[k + 2] * (a * a);
+							auto t = Utils::bezier3(controls[k+0], controls[k+1], controls[k+2], a);
+
+							temp[j] = Utils::vec3toBSPVertex(t);
 						}
 
 						for (j = 0; j < L1; ++j) {
 							float a = (float)j / L;
 							float b = 1.0 - a;
 
-							BSP_vertex v;
-							glm::vec3 interpolated = temp[0] * (b * b) +
-								temp[1] * (2 * b * a) +
-								temp[2] * (a * a);
-							v.x = interpolated.x;
-							v.y = interpolated.y;
-							v.z = interpolated.z;
+							auto v = Utils::bezier3(temp[0], temp[1], temp[2], a);							
 							v.textureIndex = face->texture;
 							v.lightmapIndex = face->lm_index;
 							v.texCoordX = Utils::randomF(0.0, 1.0);

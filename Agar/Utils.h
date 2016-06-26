@@ -1,10 +1,56 @@
 #include <cmath>
 #include <GL/GLU.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include "BSP.h"
 #pragma once
 
 namespace Utils {
 	inline static double randomF(double low, double up) {
 		return low + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (up - low)));
+	}
+
+	inline static BSP_vertex vec3toBSPVertex(const glm::vec3 & v3) {
+		BSP_vertex v;
+		v.x = v3.x;
+		v.y = v3.y;
+		v.z = v3.z;
+
+		return v;
+	}
+
+	inline static glm::vec3 BSPVertexToVec3(const BSP_vertex & v) {
+		glm::vec3 v3;
+		v3.x = v.x;
+		v3.y = v.y;
+		v3.z = v.z;
+
+		return v3;
+	}
+
+	inline static glm::vec3 bezier3(const glm::vec3 & p0, const glm::vec3 & p1, const glm::vec3 & p2, float a) {
+		float b = 1.0 - a;
+		return 
+			p0 * (b * b) +
+			p1 * (2 * b * a) +
+			p2 * (a * a);
+	}
+
+	inline static BSP_vertex bezier3(const BSP_vertex & p0, const BSP_vertex & p1, const BSP_vertex & p2, float a) {
+		float b = 1.0 - a;
+		glm::vec3 _p0, _p1, _p2;
+		_p0.x = p0.x; _p0.y = p0.y; _p0.z = p0.z;
+		_p1.x = p1.x; _p1.y = p1.y; _p1.z = p1.z;
+		_p2.x = p2.x; _p2.y = p2.y; _p2.z = p2.z;
+
+		auto finalVec3 = bezier3(_p0, _p1, _p2, a);
+		BSP_vertex finalBSP;
+		finalBSP.x = finalVec3.x;
+		finalBSP.y = finalVec3.y;
+		finalBSP.z = finalVec3.z;
+
+		return finalBSP;
 	}
 
 	constexpr unsigned int bytes2megabytes(unsigned int bytes) {
