@@ -231,20 +231,19 @@ void run() {
 					auto c8 = off + rowOff + px + 1;
 					auto c9 = off + rowOff + px + 2;
 					
-					std::array<glm::vec3, 9> controls;
-					std::array<glm::vec3, 9> texcoords;
+					std::array<BSP_vertex, 9> controls;
 
-					controls[0] = glm::vec3(vertexes[c1].x, vertexes[c1].y, vertexes[c1].z);
-					controls[1] = glm::vec3(vertexes[c2].x, vertexes[c2].y, vertexes[c2].z);
-					controls[2] = glm::vec3(vertexes[c3].x, vertexes[c3].y, vertexes[c3].z);
+					controls[0] = vertexes[c1];
+					controls[1] = vertexes[c2];
+					controls[2] = vertexes[c3];
 
-					controls[3] = glm::vec3(vertexes[c4].x, vertexes[c4].y, vertexes[c4].z);
-					controls[4] = glm::vec3(vertexes[c5].x, vertexes[c5].y, vertexes[c5].z);
-					controls[5] = glm::vec3(vertexes[c6].x, vertexes[c6].y, vertexes[c6].z);
+					controls[3] = vertexes[c4];
+					controls[4] = vertexes[c5];
+					controls[5] = vertexes[c6];
 
-					controls[6] = glm::vec3(vertexes[c7].x, vertexes[c7].y, vertexes[c7].z);
-					controls[7] = glm::vec3(vertexes[c8].x, vertexes[c8].y, vertexes[c8].z);
-					controls[8] = glm::vec3(vertexes[c9].x, vertexes[c9].y, vertexes[c9].z);
+					controls[6] = vertexes[c7];
+					controls[7] = vertexes[c8];
+					controls[8] = vertexes[c9];
 
 					auto L = 8;
 					auto L1 = L + 1;
@@ -253,11 +252,37 @@ void run() {
 						float a = (float)i / L;
 						float b = 1 - a;
 						
-						auto v = Utils::bezier3(vertexes[c1], vertexes[c4], vertexes[c7], a);
+						BSP_vertex v;
+
+						glm::vec3 _pos1 = glm::vec3(controls[0].x, controls[0].y, controls[0].z);
+						glm::vec3 _pos2 = glm::vec3(controls[3].x, controls[3].y, controls[3].z);
+						glm::vec3 _pos3 = glm::vec3(controls[6].x, controls[6].y, controls[6].z);
+						
+						glm::vec3 _tex1 = glm::vec3(controls[0].texCoordX, controls[0].texCoordY, 0.0);
+						glm::vec3 _tex2 = glm::vec3(controls[3].texCoordX, controls[3].texCoordY, 0.0);
+						glm::vec3 _tex3 = glm::vec3(controls[6].texCoordX, controls[6].texCoordY, 0.0);
+
+						glm::vec3 _lm1 = glm::vec3(controls[0].lmCoordX, controls[0].lmCoordY, 0.0);
+						glm::vec3 _lm2 = glm::vec3(controls[3].lmCoordX, controls[3].lmCoordY, 0.0);
+						glm::vec3 _lm3 = glm::vec3(controls[6].lmCoordX, controls[6].lmCoordY, 0.0);
+
+						auto pos = Utils::bezier3(_pos1, _pos2, _pos3, a);
+						auto tex = Utils::bezier3(_tex1, _tex2, _tex3, a);
+						auto lm = Utils::bezier3(_lm1, _lm2, _lm3, a);
+
+						v.x = pos.x;
+						v.y = pos.y;
+						v.z = pos.z;
+
+						v.texCoordX = tex.x;
+						v.texCoordY = tex.y;
+
+						v.lmCoordX = lm.x;
+						v.lmCoordY = lm.y;
+
 						v.textureIndex = face->texture;
 						v.lightmapIndex = face->lm_index;
-						v.texCoordX = Utils::randomF(0.0, 1.0);
-						v.texCoordY = Utils::randomF(0.0, 1.0);
+
 						vertexes.push_back(v);
 					}
 
@@ -270,20 +295,73 @@ void run() {
 						int j;
 						for (j = 0; j < 3; ++j) {
 							int k = 3 * j;
-							auto t = Utils::bezier3(controls[k+0], controls[k+1], controls[k+2], a);
+							
+							BSP_vertex v;
 
-							temp[j] = Utils::vec3toBSPVertex(t);
+							glm::vec3 _pos1 = glm::vec3(controls[k+0].x, controls[k+0].y, controls[k+0].z);
+							glm::vec3 _pos2 = glm::vec3(controls[k+1].x, controls[k + 1].y, controls[k + 1].z);
+							glm::vec3 _pos3 = glm::vec3(controls[k + 2].x, controls[k + 2].y, controls[k + 2].z);
+
+							glm::vec3 _tex1 = glm::vec3(controls[k + 0].texCoordX, controls[k + 0].texCoordY, 0.0);
+							glm::vec3 _tex2 = glm::vec3(controls[k + 1].texCoordX, controls[k + 1].texCoordY, 0.0);
+							glm::vec3 _tex3 = glm::vec3(controls[k + 2].texCoordX, controls[k + 2].texCoordY, 0.0);
+
+							glm::vec3 _lm1 = glm::vec3(controls[k + 0].lmCoordX, controls[k + 0].lmCoordY, 0.0);
+							glm::vec3 _lm2 = glm::vec3(controls[k + 1].lmCoordX, controls[k + 1].lmCoordY, 0.0);
+							glm::vec3 _lm3 = glm::vec3(controls[k + 2].lmCoordX, controls[k + 2].lmCoordY, 0.0);
+
+							auto pos = Utils::bezier3(_pos1, _pos2, _pos3, a);
+							auto tex = Utils::bezier3(_tex1, _tex2, _tex3, a);
+							auto lm = Utils::bezier3(_lm1, _lm2, _lm3, a);
+
+							v.x = pos.x;
+							v.y = pos.y;
+							v.z = pos.z;
+
+							v.texCoordX = tex.x;
+							v.texCoordY = tex.y;
+
+							v.lmCoordX = lm.x;
+							v.lmCoordY = lm.y;
+
+							temp[j] = v;
 						}
 
 						for (j = 0; j < L1; ++j) {
 							float a = (float)j / L;
 							float b = 1.0 - a;
+							
+							BSP_vertex v;
 
-							auto v = Utils::bezier3(temp[0], temp[1], temp[2], a);							
+							glm::vec3 _pos1 = glm::vec3(temp[0].x, temp[0].y, temp[0].z);
+							glm::vec3 _pos2 = glm::vec3(temp[1].x, temp[1].y, temp[1].z);
+							glm::vec3 _pos3 = glm::vec3(temp[2].x, temp[2].y, temp[2].z);
+
+							glm::vec3 _tex1 = glm::vec3(temp[0].texCoordX, temp[0].texCoordY, 0.0);
+							glm::vec3 _tex2 = glm::vec3(temp[1].texCoordX, temp[1].texCoordY, 0.0);
+							glm::vec3 _tex3 = glm::vec3(temp[2].texCoordX, temp[2].texCoordY, 0.0);
+
+							glm::vec3 _lm1 = glm::vec3(temp[0].lmCoordX, temp[0].lmCoordY, 0.0);
+							glm::vec3 _lm2 = glm::vec3(temp[1].lmCoordX, temp[1].lmCoordY, 0.0);
+							glm::vec3 _lm3 = glm::vec3(temp[2].lmCoordX, temp[2].lmCoordY, 0.0);
+
+							auto pos = Utils::bezier3(_pos1, _pos2, _pos3, a);
+							auto tex = Utils::bezier3(_tex1, _tex2, _tex3, a);
+							auto lm = Utils::bezier3(_lm1, _lm2, _lm3, a);
+
+							v.x = pos.x;
+							v.y = pos.y;
+							v.z = pos.z;
+
+							v.texCoordX = tex.x;
+							v.texCoordY = tex.y;
+
+							v.lmCoordX = lm.x;
+							v.lmCoordY = lm.y;
+
 							v.textureIndex = face->texture;
 							v.lightmapIndex = face->lm_index;
-							v.texCoordX = Utils::randomF(0.0, 1.0);
-							v.texCoordY = Utils::randomF(0.0, 1.0);
+
 							vertexes.push_back(v);
 						}
 					}

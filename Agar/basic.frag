@@ -32,6 +32,5 @@ void main()
 	}
 	*/
 
-	color.rgb = texel*lmxel;
-	
+	color.rgb = texel*lmxel;	
 }
