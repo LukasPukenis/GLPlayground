@@ -1,34 +1,29 @@
 #pragma once
-#include <chrono>
-#include <string>
-#include <thread>
-#include <mutex>
+#define GLEW_STATIC
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+#include "BSP.h"
 #include <vector>
-#include "Drawable.h"
-#include "Render.h"
+#include <string>
+#include "Camera.h"
 
 class Game {
 public:
-	Game();
 	void run();
-	void pause();
-	void tick();
-	bool isRunning();
-	void addElement(Drawable * element);
-	Render * getRender();
+	void setup(const std::string & mapName, GLuint width, GLuint height);		
+	void keyCallback(int key, int action);
+	void mouseCallback(double xpos, double ypos);
 private:
-	void draw();
-	void processInput();
-	void processActions();
-	std::vector<Drawable *> elements;
-
-	std::vector<char> keyboardInput;
-	bool running;
-	std::chrono::steady_clock::time_point lastTime;
-	uint64_t frame;
-
-	std::mutex inputMutex;
-	std::thread inputThread;
-	std::thread processThread;
-	Render * render;
+	void prepareFaces();
+	void Game::processInputs();
+	std::string mapName;
+	BSP bsp;
+	std::vector<unsigned int> indexes;
+	GLFWwindow* window;
+	Camera camera;
+	double deltaTime, lastFrameTime;
+	int keysPressed[0xFF];
+	bool firstMouse = true;
+	double lastMouseX, lastMouseY;
+	GLuint WIDTH, HEIGHT;;
 };

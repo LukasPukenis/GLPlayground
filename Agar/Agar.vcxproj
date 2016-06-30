@@ -126,11 +126,13 @@
   <ItemGroup>
     <ClCompile Include="BSP.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="Game.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BSP.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Game.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="Utils.h" />
   </ItemGroup>
