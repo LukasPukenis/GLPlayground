@@ -103,7 +103,7 @@ struct BSP_lightmap {
 	std::array<GLbyte, 128*128*3> rgb;
 };
 
-typedef std::vector<std::shared_ptr<BSP_face>> face_t;
+typedef std::vector<BSP_face> face_t;
 typedef std::vector<BSP_vertex> vertex_t;
 typedef std::vector<unsigned int> meshVertex_t;
 typedef std::vector<BSP_texture> texture_t;

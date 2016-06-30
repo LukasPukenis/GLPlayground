@@ -126,13 +126,11 @@
   <ItemGroup>
     <ClCompile Include="BSP.cpp" />
     <ClCompile Include="Camera.cpp" />
-    <ClCompile Include="Drawable.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BSP.h" />
     <ClInclude Include="Camera.h" />
-    <ClInclude Include="Drawable.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="Utils.h" />
   </ItemGroup>

@@ -29,45 +29,30 @@ void BSP::readVertexes() {
 	auto len = header[index].length;	
 	mapFile.seekg(header[index].offset);
 
+	// we can't read vertexes as a whole because BSP_vertex structure contains additional fields, so we read it and parse it
+	typedef struct {
+		float a[3];
+		float b[2][2];
+		float c[3];
+		unsigned char d[4];
+	} bsp_vert_original;
+
+	std::vector<bsp_vert_original> data;
+	data.reserve(len/44);
+
 	// as all the bsp vertex structures are as bytes inside vector, put them inside structures
+	auto c = sizeof(BSP_vertex);
 	for (unsigned int i = 0; i < len; i+=44) {
-		auto vertex = BSP_vertex();
-		double K = 0.01;
-		K = 1.0;
-		vertex.x = readFloatAndAdvance()*K;
-		vertex.y = readFloatAndAdvance()*K;
-		vertex.z = readFloatAndAdvance()*K;
-
-		// swizzle
-		auto temp = vertex.y;
-		vertex.y = vertex.z;
-		vertex.z = -temp;
-		// end of swizzling
-
-		vertex.texCoordX = readFloatAndAdvance();
-		vertex.texCoordY = readFloatAndAdvance();
-
-		vertex.lmCoordX = readFloatAndAdvance();
-		vertex.lmCoordY = readFloatAndAdvance();
-
-		vertex.normalX = readFloatAndAdvance();
-		vertex.normalY = readFloatAndAdvance();
-		vertex.normalZ = readFloatAndAdvance();
-
-		vertex.r = readByteAndAdvance();
-		vertex.g = readByteAndAdvance();
-		vertex.b = readByteAndAdvance();
-		vertex.a = readByteAndAdvance();
-
-		vertexes.push_back(vertex);
+		auto vertex = bsp_vert_original();
+		mapFile.read(reinterpret_cast<char*>(&vertex), sizeof(bsp_vert_original));
+		data.push_back(vertex);
 	}
 
-	auto x1 = std::max_element(vertexes.begin(), vertexes.end(), [](const BSP_vertex &a, const BSP_vertex &b) { return a.texCoordX < b.texCoordX; });
-	auto x2 = std::max_element(vertexes.begin(), vertexes.end(), [](const BSP_vertex &a, const BSP_vertex &b) { return a.texCoordY < b.texCoordY; });
-	auto y1 = std::min_element(vertexes.begin(), vertexes.end(), [](const BSP_vertex &a, const BSP_vertex &b) { return a.texCoordX < b.texCoordX; });
-	auto y2 = std::min_element(vertexes.begin(), vertexes.end(), [](const BSP_vertex &a, const BSP_vertex &b) { return a.texCoordY < b.texCoordY; });
-	int x = 2;
-
+	for (auto v : data) {
+		auto & vert = BSP_vertex();
+		vert = reinterpret_cast<BSP_vertex&>(v);
+		vertexes.push_back(vert);
+	}
 }
 
 void BSP::readMeshVertexes() {
@@ -75,9 +60,8 @@ void BSP::readMeshVertexes() {
 	auto len = header[index].length;
 	mapFile.seekg(header[index].offset);
 
-	for (unsigned int i = 0; i < len; i+=4) {		
-		meshVertexes.push_back(readIntAndAdvance());
-	}
+	meshVertexes.resize(len);
+	mapFile.read(reinterpret_cast<char*>(&meshVertexes[0]), len);
 }
 
 int BSP::readIntAndAdvance() {
@@ -108,9 +92,7 @@ void BSP::readLightmaps() {
 
 	// by spec lightmaps are 128x128 always
 	int const maxW = 128;
-	int const maxH = 128;
-
-	auto count = len / sizeof(BSP_lightmap);	
+	int const maxH = 128;	
 
 	glActiveTexture(GL_TEXTURE0+1);
 	glGenTextures(1, &lightmapHandle);
@@ -125,19 +107,11 @@ void BSP::readLightmaps() {
 	// mipmap parameters
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	auto count = len / sizeof(BSP_lightmap);
 	for (auto i = 0; i < count; i++) {
 		BSP_lightmap lightmap;
-
-		for (auto j = 0; j < maxW*maxH*3; j += 3) {
-			auto r = readByteAndAdvance();
-			auto g = readByteAndAdvance();
-			auto b = readByteAndAdvance();
-
-			lightmap.rgb[j + 0] = r;
-			lightmap.rgb[j + 1] = g;
-			lightmap.rgb[j + 2] = b;
-		}
-
+		mapFile.read(reinterpret_cast<char*>(&lightmap), maxW*maxH*3);
 		lightmaps.push_back(lightmap);
 		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, maxW, maxH, 1, GL_RGB, GL_UNSIGNED_BYTE, lightmap.rgb.data());
 	}
@@ -157,7 +131,7 @@ void BSP::readTextures() {
 
 	glActiveTexture(GL_TEXTURE0);
 	glGenTextures(1, &textureHandle);
-	glBindTexture(GL_TEXTURE_2D_ARRAY, textureHandle);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, textureHandle);	
 
 	auto depth = len / sizeof(BSP_texture);
 
@@ -168,12 +142,13 @@ void BSP::readTextures() {
 	// mipmap parameters
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
+	
 	for (unsigned int i = 0; i < depth; i ++) {
 		auto texture = BSP_texture();
-
 		mapFile.read(reinterpret_cast<char*>(&texture), sizeof(BSP_texture));
 		textures.push_back(texture);
+
+		// textures are without extensions in a map, but there can be only jpg or tga so we check for both
 		std::fstream texFile;
 		std::string jpeg_filename = (std::string("./map/") + texture.name + ".jpg");
 		std::string tga_filename = (std::string("./map/") + texture.name + ".tga");
@@ -192,21 +167,18 @@ void BSP::readTextures() {
 		bool isRealFile = false;
 		if (isGoodJPEG) {
 			isRealFile = true;
-			std::cout << texture.name << " [JPEG] ";
 			image = SOIL_load_image(jpeg_filename.c_str(), &width, &height, &channels, SOIL_LOAD_RGB);
 		}
 		else if(isGoodTGA) {
 			isRealFile = true;
-			std::cout << texture.name << " [TGA] ";
 			image = SOIL_load_image(tga_filename.c_str(), &width, &height, &channels, SOIL_LOAD_RGB);
 		}
 		else {
-			std::cout << texture.name << "[!!!]";
+			std::cout << texture.name << "[texture not found]" << std::endl;
 		}
 		
 		if (isRealFile) {
-			glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, width, height, 1, GL_RGB, GL_UNSIGNED_BYTE, image);
-			
+			glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, i, width, height, 1, GL_RGB, GL_UNSIGNED_BYTE, image);			
 			SOIL_free_image_data(image);
 		}
 	}
@@ -221,41 +193,8 @@ void BSP::readFaces() {
 	auto len = header[index].length;
 	mapFile.seekg(header[index].offset);
 
-	auto s = sizeof(BSP_face);
-
-	for (unsigned int i = 0; i < len; i += 104) {
-		auto face = std::make_shared<BSP_face>();
-		
-		face->texture = readIntAndAdvance();
-		face->effect  = readIntAndAdvance();
-		face->type = readIntAndAdvance();
-		face->vertex = readIntAndAdvance();
-		face->n_vertexes = readIntAndAdvance();
-		face->meshvert = readIntAndAdvance();
-		face->n_meshverts = readIntAndAdvance();
-		face->lm_index = readIntAndAdvance();
-		face->lm_start[0] = readIntAndAdvance();
-		face->lm_start[1] = readIntAndAdvance();
-		face->lm_size[0] = readIntAndAdvance();
-		face->lm_size[1] = readIntAndAdvance();
-		face->lm_origin[0] = readFloatAndAdvance();
-		face->lm_origin[1] = readFloatAndAdvance();
-		face->lm_origin[2] = readFloatAndAdvance();
-
-		face->lm_vecs[0][0] = readFloatAndAdvance();
-		face->lm_vecs[0][1] = readFloatAndAdvance();
-		face->lm_vecs[0][2] = readFloatAndAdvance();
-		face->lm_vecs[1][0] = readFloatAndAdvance();
-		face->lm_vecs[1][1] = readFloatAndAdvance();
-		face->lm_vecs[1][2] = readFloatAndAdvance();
-
-		face->normal[0] = readFloatAndAdvance();
-		face->normal[1] = readFloatAndAdvance();
-		face->normal[2] = readFloatAndAdvance();
-		face->size[0] = readIntAndAdvance();
-		face->size[1] = readIntAndAdvance();
-		faces.push_back(face);		
-	}
+	faces.resize(len/104);
+	mapFile.read(reinterpret_cast<char*>(&faces[0]), len);
 }
 
 void BSP::readEntities() {
@@ -303,7 +242,6 @@ void BSP::readEntities() {
 				auto y = std::atof(val2.c_str());
 				auto z = std::atof(val3.c_str());
 				//entities[]
-
 			}
 			else if (key == "angle") {
 				auto match = std::sregex_iterator(keyval.begin(), keyval.end(), float_regex);
@@ -313,7 +251,6 @@ void BSP::readEntities() {
 				auto match = std::sregex_iterator(keyval.begin(), keyval.end(), keyval_regex);				
 				val1 = (*match).str();
 			}
-			
 			
 			std::cout << "->" << key << " -> " << val1 << ":" << val2 << ":" << val3 << std::endl;
 		}
@@ -346,7 +283,6 @@ BSP::STATUS BSP::parse(const char * path) {
 	binaryLength = getIfstreamSize(mapFile);
 	parseHeader();
 
-	// parse lumps
 	// readEntities();
 	readVertexes();
 	readMeshVertexes();

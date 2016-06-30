@@ -20,7 +20,9 @@ out int lmIndex;
 
 void main()
 {
-    gl_Position = projection * view * model * vec4(position, 1.0f);
+	vec3 swizzled = vec3(position.x, position.z, -position.y);
+	
+    gl_Position = projection * view * model * vec4(swizzled, 1.0f);
 
     ourColor = color;	
 	texUV = texel;

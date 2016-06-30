@@ -6,7 +6,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <vector>
-#include "Drawable.h"
 #include "Shader.h"
 #include <cstdlib>
 #include <ctime>
@@ -125,31 +124,7 @@ void processInputs() {
 		camera.move(Camera::Right);
 	}
 }
-/*
-screenshots:
-http://puu.sh/pB6Ob/18a49c192e.jpg
-http://puu.sh/pB6Pr/6d0a1ff2ae.jpg
-http://puu.sh/pB6RY/f1ae00a181.jpg
-http://puu.sh/pB6VT/8d06cf59a8.jpg
 
-http://puu.sh/pB7iF/9d489c22f7.jpg
-*/
-
-/*
-BSP_vertex cubicBezier(const BSP_vertex & c0, const BSP_vertex & c1, const BSP_vertex & c2, float t) {
-	auto _c0 = glm::vec3(c0.x, c0.y, c0.z);
-	auto _c1 = glm::vec3(c1.x, c1.y, c1.z);
-	auto _c2 = glm::vec3(c2.x, c2.y, c2.z);
-
-	float b = 1.0 - t;
-	auto dist = b * _c0 + 2 * b*t*_c1 + t*t*_c2;
-	BSP_vertex final;
-	final.x = dist.x;
-	final.y = dist.y;
-	final.z = dist.z;
-	return final;
-}
-*/
 glm::vec3 cubicBezier(const glm::vec3 & c0, const glm::vec3 & c1, const glm::vec3 & c2, float t) {
 	float b = 1.0 - t;
 	return b * c0 + 2*b*t*c1 + t*t*c2;
@@ -179,29 +154,29 @@ void run() {
 	std::vector<unsigned int> indexes;
 	
 	std::sort(faces.begin(), faces.end(), [&](const auto & a, const auto & b) {
-		return a->type < b->type;
+		return a.type < b.type;
 	});
 
 	while (polygon != faces.end()) {
 		faceCnt++;
 		polygon = std::find_if(polygon + 1, faces.end(), [&](const auto & item) {
-			return item->type == 1 || item->type == 2;
+			return item.type == 1 || item.type == 2;
 		});
 		
 		if (polygon == faces.end()) break;
 		auto face = *polygon;
-		auto type = face->type;
+		auto type = face.type;
 
-		int vertex = face->vertex;
-		int length = face->n_meshverts;
-		int offset = face->meshvert;
+		int vertex = face.vertex;
+		int length = face.n_meshverts;
+		int offset = face.meshvert;
 		auto _off = vertexes.size();
 
 		if (type == 1 || type == 3) {
 			for (auto i = 0; i < length; i++) {
 				auto index = vertex + meshVertexes[i + offset];
-				vertexes[index].textureIndex = face->texture;
-				vertexes[index].lightmapIndex = face->lm_index;
+				vertexes[index].textureIndex = face.texture;
+				vertexes[index].lightmapIndex = face.lm_index;
 				indexes.push_back(index);
 			}
 
@@ -209,23 +184,23 @@ void run() {
 			elements.push_back(offset);
 		}	
 		else if (type == 2) {			
-			for (int py = 0; py < face->size[1] - 2; py += 2) {				
-				for (int px = 0; px < face->size[0] - 2; px += 2) {
+			for (int py = 0; py < face.size[1] - 2; py += 2) {				
+				for (int px = 0; px < face.size[0] - 2; px += 2) {
 					auto indexOffset = vertexes.size();
-					int rowOff = face->size[0] * py;
-					int off = face->vertex;
+					int rowOff = face.size[0] * py;
+					int off = face.vertex;
 
 					auto c1 = off + rowOff + px;
 					auto c2 = off + rowOff + px + 1;
 					auto c3 = off + rowOff + px + 2;
 
-					rowOff += face->size[0];
+					rowOff += face.size[0];
 
 					auto c4 = off + rowOff + px;
 					auto c5 = off + rowOff + px + 1;
 					auto c6 = off + rowOff + px + 2;
 
-					rowOff += face->size[0];
+					rowOff += face.size[0];
 
 					auto c7 = off + rowOff + px;
 					auto c8 = off + rowOff + px + 1;
@@ -280,8 +255,8 @@ void run() {
 						v.lmCoordX = lm.x;
 						v.lmCoordY = lm.y;
 
-						v.textureIndex = face->texture;
-						v.lightmapIndex = face->lm_index;
+						v.textureIndex = face.texture;
+						v.lightmapIndex = face.lm_index;
 
 						vertexes.push_back(v);
 					}
@@ -359,8 +334,8 @@ void run() {
 							v.lmCoordX = lm.x;
 							v.lmCoordY = lm.y;
 
-							v.textureIndex = face->texture;
-							v.lightmapIndex = face->lm_index;
+							v.textureIndex = face.texture;
+							v.lightmapIndex = face.lm_index;
 
 							vertexes.push_back(v);
 						}
